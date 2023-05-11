@@ -1,110 +1,103 @@
-import button
-import pygame
-import time
+import tkinter as tk
 
-# Global variables
 CELL_SIZE = 10
-GRID_WIDTH = 60
-GRID_HEIGHT = 40
-DELAY = 0.1  # Delay in seconds
+BOARD_WIDTH = 100
+BOARD_HEIGHT = 66
 
-# Colors
-red = (255, 0, 0)
-yellow = (255, 255, 0)
-white = (255, 255, 255)
+class GameOfLife:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Conway's Game of Life")
 
-# Initialize the grid
-grid = [[0] * GRID_HEIGHT for _ in range(GRID_WIDTH)]
-next_grid = [[0] * GRID_HEIGHT for _ in range(GRID_WIDTH)]
+        self.board = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]
+        self.generation = 0
+        self.running = False
 
-# Initialize Pygame
-pygame.init()
-window_size = (GRID_WIDTH * CELL_SIZE, GRID_HEIGHT * CELL_SIZE)
-window = pygame.display.set_mode(window_size)
-pygame.display.set_caption("Conway's Game of Life")
-clock = pygame.time.Clock()
+        self.canvas = tk.Canvas(self.root, width=CELL_SIZE * BOARD_WIDTH, height=CELL_SIZE * BOARD_HEIGHT, bg="white")
+        self.canvas.pack()
 
-# UI elements
-#start_button_rect = button.Button(10, 10, "Start-Button-Vector-PNG.png")
-speed_button_rect = pygame.Rect(120, 10, 100, 30)
-font = pygame.font.Font(None, 20)
-start_button_text = font.render("Start", True, (0, 0, 0))
-speed_button_text = font.render("Speed", True, (0, 0, 0))
-speed = 1.0  # Initial speed multiplier
+        self.start_button = tk.Button(self.root, text="Start", command=self.start_game)
+        self.start_button.pack()
 
-running = False  # Simulation state
+        self.generation_label = tk.Label(self.root, text="Generation: 0")
+        self.generation_label.pack()
 
-def draw_grid():
-    """Draw the grid on the window."""
-    window.fill(red)
-    for x in range(GRID_WIDTH):
-        for y in range(GRID_HEIGHT):
-            if grid[x][y] == 1:
-                pygame.draw.rect(window, yellow, (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+        self.canvas.bind("<Button-1>", self.handle_click)
 
+    def draw_board(self):
+        self.canvas.delete("all")
 
-def get_neighbour_count(x, y):
-    """Get the count of live neighbors around a cell."""
-    count = 0
-    for dx in [-1, 0, 1]:
-        for dy in [-1, 0, 1]:
-            if dx == 0 and dy == 0:
-                continue
-            nx, ny = x + dx, y + dy
-            if 0 <= nx < GRID_WIDTH and 0 <= ny < GRID_HEIGHT:
-                count += grid[nx][ny]
-    return count
+        for row in range(BOARD_HEIGHT):
+            for col in range(BOARD_WIDTH):
+                if self.board[row][col] == 1:
+                    x1 = col * CELL_SIZE
+                    y1 = row * CELL_SIZE
+                    x2 = x1 + CELL_SIZE
+                    y2 = y1 + CELL_SIZE
+                    self.canvas.create_rectangle(x1, y1, x2, y2, fill="black")
 
+    def count_live_neighbors(self, row, col):
+        count = 0
 
-def update_grid():
-    """Update the grid based on the custom rules of the Game of Life."""
-    for x in range(GRID_WIDTH):
-        for y in range(GRID_HEIGHT):
-            count = get_neighbour_count(x, y)
-            if grid[x][y] == 1:
-                if count < 2 or count > 3:
-                    next_grid[x][y] = 0  # Cell dies due to underpopulation or overpopulation
+        for i in range(-1, 2):
+            for j in range(-1, 2):
+                if i == 0 and j == 0:
+                    continue
+
+                neighbor_row = (row + i + BOARD_HEIGHT) % BOARD_HEIGHT
+                neighbor_col = (col + j + BOARD_WIDTH) % BOARD_WIDTH
+                count += self.board[neighbor_row][neighbor_col]
+
+        return count
+
+    def update_board(self):
+        new_board = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]
+
+        for row in range(BOARD_HEIGHT):
+            for col in range(BOARD_WIDTH):
+                neighbors = self.count_live_neighbors(row, col)
+
+                if self.board[row][col] == 1:
+                    if neighbors < 2 or neighbors > 3:
+                        new_board[row][col] = 0
+                    else:
+                        new_board[row][col] = 1
                 else:
-                    next_grid[x][y] = 1  # Cell survives
-            elif grid[x][y] == 0:
-                if count == 3:
-                    next_grid[x][y] = 1  # Cell becomes alive due to reproduction
-                else:
-                    next_grid[x][y] = 0  # Cell remains dead
-    grid[:] = next_grid[:]
+                    if neighbors == 3:
+                        new_board[row][col] = 1
 
+        self.board = new_board
+        self.generation += 1
+        self.generation_label.config(text="Generation: {}".format(self.generation))
+        self.draw_board()
 
-def handle_click(event):
-    """Handle mouse click events."""
-    x = event.pos[0] // CELL_SIZE
-    y = event.pos[1] // CELL_SIZE
-    if 0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT:
-        grid[x][y] = 1 - grid[x][y]  # Toggle cell state
-        draw_grid()
+        if self.running:
+            self.root.after(100, self.update_board)
 
+    def handle_click(self, event):
+        if not self.running:
+            col = event.x // CELL_SIZE
+            row = event.y // CELL_SIZE
 
-def handle_start():
-    """Start or stop the simulation."""
-    global running
-    running = not running
+            if self.board[row][col] == 0:
+                self.board[row][col] = 1
+            else:
+                self.board[row][col] = 0
 
+            self.draw_board()
 
-# Main game loop
-while True:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            exit()
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
-                handle_click(event)
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
-                handle_start()
+    def start_game(self):
+        if not self.running:
+            self.running = True
+            self.start_button.config(text="Stop")
+            self.update_board()
+        else:
+            self.running = False
+            self.start_button.config(text="Start")
 
-    if running:
-        update_grid()
-        draw_grid()
-        pygame.display.update()
-        time.sleep(DELAY / speed)
-        clock.tick()
+# Create the main window
+root = tk.Tk()
+game = GameOfLife(root)
+
+# Run the Tkinter event loop
+root.mainloop()
