@@ -18,12 +18,16 @@ class GameOfLife:
         self.running = False
 
         # This creates a Tkinter canvas widget inside the root window. The canvas is used to draw the game board. Its size is determined by multiplying the cell size with the board width and height. The canvas is also given a white background color.
-        self.canvas = tk.Canvas(self.root, width=CELL_SIZE * BOARD_WIDTH, height=CELL_SIZE * BOARD_HEIGHT, bg="red")
+        self.canvas = tk.Canvas(self.root, width=CELL_SIZE * BOARD_WIDTH, height=CELL_SIZE * BOARD_HEIGHT, bg="white")
         self.canvas.pack()
 
         # This creates a Tkinter button widget inside the root window. The button is labeled "Start" and its command parameter is set to the start_game method. When clicked, the button will invoke the start_game method.
         self.start_button = tk.Button(self.root, text="Start", command=self.start_game)
         self.start_button.pack()
+
+        # This creates a Button widget inside the window that would clear any cells off the screen. It is labeled "Clear".
+        self.clear_button = tk.Button(self.root, text="Clear", command=self.clear_cells)
+        self.clear_button.pack()
 
         # This creates a Tkinter label widget inside the root window. The label displays the current generation number, which is initially set to 0.
         self.generation_label = tk.Label(self.root, text="Generation: 0")
@@ -44,7 +48,7 @@ class GameOfLife:
                     y1 = row * CELL_SIZE
                     x2 = x1 + CELL_SIZE
                     y2 = y1 + CELL_SIZE
-                    self.canvas.create_rectangle(x1, y1, x2, y2, fill="yellow")
+                    self.canvas.create_rectangle(x1, y1, x2, y2, fill="black")
 
 # This method takes the row and column indices of a cell as input and returns the count of live neighbors around that cell. It iterates over the neighboring cells (including diagonal neighbors) and counts the number of live cells (cells with a value of 1) in the board.
 # The method uses modular arithmetic to handle the wrapping around the edges of the board. If a neighboring cell is outside the board boundaries, it wraps around to the opposite side. For example, if the cell is at the top row and its neighbor is in the row above, the neighbor will be considered as the bottom row.
@@ -115,6 +119,14 @@ class GameOfLife:
         else:
             self.running = False
             self.start_button.config(text="Start")
+
+# This method is utilized when the clear button is clicked. This will delete "all" off of the canvas and revert generations back to 0.
+    def clear_cells(self):
+        self.canvas.delete("all")
+        self.generation = 0
+        self.generation_label.config(text="Generation: {}".format(self.generation))
+        self.board = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]
+
 
 # Create the main window: These lines create the main window using the Tkinter Tk class and assign it to root. Then, an instance of the GameOfLife class is created with root as an argument, initializing the game.
 root = tk.Tk()
